@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dentofacial CT Atlas</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #111;
+    color: #eee;
+    font-family: sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    min-height: 100vh;
+  }
+
+  h1 {
+    font-size: 16px;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #aaa;
+    margin-bottom: 16px;
+  }
+
+  #viewer {
+    position: relative;
+    width: 544px;
+    height: 418px;
+    background: #000;
+    border: 1px solid #333;
+    cursor: ns-resize;
+    user-select: none;
+  }
+
+  #viewer canvas {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  #slice-label {
+    position: absolute;
+    top: 8px; left: 10px;
+    font-size: 12px;
+    color: #fff;
+    opacity: 0.7;
+    pointer-events: none;
+  }
+
+  #controls {
+    margin-top: 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 544px;
+  }
+
+  #slider {
+    flex: 1;
+    accent-color: #4af;
+  }
+
+  #slice-num {
+    font-size: 13px;
+    color: #aaa;
+    min-width: 60px;
+    text-align: right;
+  }
+
+  #hint {
+    margin-top: 8px;
+    font-size: 11px;
+    color: #555;
+  }
+</style>
+</head>
+<body>
+
+<h1>Dentofacial CT Atlas</h1>
+
+<div id="viewer">
+  <canvas id="ct-canvas" width="544" height="418"></canvas>
+  <div id="slice-label">Slice <span id="label-num">1</span> / 30</div>
+</div>
+
+<div id="controls">
+  <span style="font-size:12px;color:#666;">Superior</span>
+  <input type="range" id="slider" min="0" max="29" value="0">
+  <span style="font-size:12px;color:#666;">Inferior</span>
+  <span id="slice-num">1 / 30</span>
+</div>
+
+<div id="hint">Scroll, drag, or use the slider to navigate slices</div>
+
+<script>
+  const TOTAL_SLICES = 30;
+  const canvas = document.getElementById('ct-canvas');
+  const ctx = canvas.getContext('2d');
+  const slider = document.getElementById('slider');
+  const sliceNum = document.getElementById('slice-num');
+  const labelNum = document.getElementById('label-num');
+  const viewer = document.getElementById('viewer');
+
+  const images = [];
+  let currentSlice = 0;
+  let loadedCount = 0;
+
+  function sliceFilename(i) {
+    return `slices/slice_${String(i).padStart(2, '0')}.png`;
+  }
+
+  function drawSlice(i) {
+    if (images[i] && images[i].complete && images[i].naturalWidth > 0) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(images[i], 0, 0, canvas.width, canvas.height);
+    }
+    sliceNum.textContent = `${i + 1} / ${TOTAL_SLICES}`;
+    labelNum.textContent = i + 1;
+    slider.value = i;
+    currentSlice = i;
+  }
+
+  function setSlice(i) {
+    i = Math.max(0, Math.min(TOTAL_SLICES - 1, i));
+    drawSlice(i);
+  }
+
+  for (let i = 0; i < TOTAL_SLICES; i++) {
+    const img = new Image();
+    img.src = sliceFilename(i);
+    img.onload = () => { loadedCount++; if (i === 0) drawSlice(0); };
+    images.push(img);
+  }
+
+  slider.addEventListener('input', () => setSlice(parseInt(slider.value)));
+
+  viewer.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    setSlice(currentSlice + (e.deltaY > 0 ? 1 : -1));
+  }, { passive: false });
+
+  let dragStart = null;
+  viewer.addEventListener('mousedown', (e) => { dragStart = e.clientY; });
+  window.addEventListener('mousemove', (e) => {
+    if (dragStart === null) return;
+    const delta = e.clientY - dragStart;
+    if (Math.abs(delta) > 12) {
+      setSlice(currentSlice + (delta > 0 ? 1 : -1));
+      dragStart = e.clientY;
+    }
+  });
+  window.addEventListener('mouseup', () => { dragStart = null; });
+
+  let touchStart = null;
+  viewer.addEventListener('touchstart', (e) => { touchStart = e.touches[0].clientY; }, { passive: true });
+  viewer.addEventListener('touchmove', (e) => {
+    if (touchStart === null) return;
+    const delta = e.touches[0].clientY - touchStart;
+    if (Math.abs(delta) > 15) {
+      setSlice(currentSlice + (delta > 0 ? 1 : -1));
+      touchStart = e.touches[0].clientY;
+    }
+  }, { passive: true });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowRight') setSlice(currentSlice + 1);
+    if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') setSlice(currentSlice - 1);
+  });
+</script>
+</body>
+</html>
