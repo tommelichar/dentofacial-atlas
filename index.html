@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" style="overflow: hidden;">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,24 +8,12 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
   body {
-    background: #111;
-    color: #eee;
-    font-family: sans-serif;
+    background: #fff;
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 0;
-    margin: 0;
+    padding: 8px;
     overflow: hidden;
-  }
-
-  h1 {
-    font-size: 16px;
-    font-weight: 500;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    color: #aaa;
-    margin-bottom: 16px;
   }
 
   #viewer {
@@ -33,7 +21,6 @@
     width: 100%;
     aspect-ratio: 544 / 418;
     background: #000;
-    border: 1px solid #333;
     cursor: ns-resize;
     user-select: none;
   }
@@ -45,72 +32,37 @@
     height: 100%;
   }
 
-  #slice-label {
-    position: absolute;
-    top: 8px; left: 10px;
-    font-size: 12px;
-    color: #fff;
-    opacity: 0.7;
-    pointer-events: none;
-  }
-
   #controls {
-    margin-top: 14px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
+    margin-top: 10px;
     width: 100%;
+    padding: 0 4px;
   }
 
   #slider {
-    flex: 1;
+    width: 100%;
     accent-color: #4af;
-  }
-
-  #slice-num {
-    font-size: 13px;
-    color: #aaa;
-    min-width: 60px;
-    text-align: right;
-  }
-
-  #hint {
-    margin-top: 8px;
-    font-size: 11px;
-    color: #555;
   }
 </style>
 </head>
 <body>
 
-<h1>Dentofacial CT Atlas</h1>
-
 <div id="viewer">
   <canvas id="ct-canvas" width="544" height="418"></canvas>
-  <div id="slice-label">Slice <span id="label-num">1</span> / 30</div>
 </div>
 
 <div id="controls">
-  <span style="font-size:12px;color:#666;">Superior</span>
   <input type="range" id="slider" min="0" max="29" value="0">
-  <span style="font-size:12px;color:#666;">Inferior</span>
-  <span id="slice-num">1 / 30</span>
 </div>
-
-<div id="hint">Scroll, drag, or use the slider to navigate slices</div>
 
 <script>
   const TOTAL_SLICES = 30;
   const canvas = document.getElementById('ct-canvas');
   const ctx = canvas.getContext('2d');
   const slider = document.getElementById('slider');
-  const sliceNum = document.getElementById('slice-num');
-  const labelNum = document.getElementById('label-num');
   const viewer = document.getElementById('viewer');
 
   const images = [];
   let currentSlice = 0;
-  let loadedCount = 0;
 
   function sliceFilename(i) {
     return `slices/slice_${String(i).padStart(2, '0')}.png`;
@@ -121,21 +73,18 @@
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.drawImage(images[i], 0, 0, canvas.width, canvas.height);
     }
-    sliceNum.textContent = `${i + 1} / ${TOTAL_SLICES}`;
-    labelNum.textContent = i + 1;
     slider.value = i;
     currentSlice = i;
   }
 
   function setSlice(i) {
-    i = Math.max(0, Math.min(TOTAL_SLICES - 1, i));
-    drawSlice(i);
+    drawSlice(Math.max(0, Math.min(TOTAL_SLICES - 1, i)));
   }
 
   for (let i = 0; i < TOTAL_SLICES; i++) {
     const img = new Image();
     img.src = sliceFilename(i);
-    img.onload = () => { loadedCount++; if (i === 0) drawSlice(0); };
+    img.onload = () => { if (i === 0) drawSlice(0); };
     images.push(img);
   }
 
