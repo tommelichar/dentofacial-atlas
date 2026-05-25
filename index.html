@@ -1,46 +1,66 @@
 <!DOCTYPE html>
-<html lang="en" style="overflow: hidden;">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dentofacial CT Atlas</title>
 <style>
+  :root {
+    --im-x: 2863;
+    --im-y: 2327;
+    --slider-h: 50px;
+  }
+
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
-  body {
-    background: #fff;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 8px;
+  html, body {
     width: 100vw;
     height: 100vh;
     overflow: hidden;
+    background: #fff;
+  }
+
+  body {
+    display: flex;
+    flex-direction: column;
+  }
+
+  #image-area {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 0;
+  }
+
+  #band {
+    width: 100%;
+    height: min(calc(100vh - var(--slider-h)), calc(100vw * var(--im-y) / var(--im-x)));
+    background: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   #viewer {
-    position: relative;
-    width: 100%;
-    max-width: 100%;
-    max-height: calc(100vh - 50px);
-    aspect-ratio: 544 / 418;
+    width: min(100vw, calc((100vh - var(--slider-h)) * var(--im-x) / var(--im-y)));
+    height: 100%;
     background: #000;
     cursor: ns-resize;
     user-select: none;
   }
 
-  #viewer canvas {
-    position: absolute;
-    top: 0; left: 0;
+  #ct-canvas {
     width: 100%;
     height: 100%;
+    display: block;
   }
 
   #controls {
-    margin-top: 10px;
-    width: 100%;
-    padding: 0 4px;
+    height: var(--slider-h);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
   }
 
   #slider {
@@ -51,8 +71,12 @@
 </head>
 <body>
 
-<div id="viewer">
-  <canvas id="ct-canvas" width="544" height="418"></canvas>
+<div id="image-area">
+  <div id="band">
+    <div id="viewer">
+      <canvas id="ct-canvas"></canvas>
+    </div>
+  </div>
 </div>
 
 <div id="controls">
@@ -73,10 +97,18 @@
     return `slices/slice_${String(i).padStart(2, '0')}.png`;
   }
 
+  function setAspectFromImage(img) {
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    document.documentElement.style.setProperty('--im-x', img.naturalWidth);
+    document.documentElement.style.setProperty('--im-y', img.naturalHeight);
+  }
+
   function drawSlice(i) {
-    if (images[i] && images[i].complete && images[i].naturalWidth > 0) {
+    const img = images[i];
+    if (img && img.complete && img.naturalWidth > 0) {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(images[i], 0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
     }
     slider.value = i;
     currentSlice = i;
@@ -89,7 +121,12 @@
   for (let i = 0; i < TOTAL_SLICES; i++) {
     const img = new Image();
     img.src = sliceFilename(i);
-    img.onload = () => { if (i === 0) drawSlice(0); };
+    img.onload = () => {
+      if (i === 0) {
+        setAspectFromImage(img);
+        drawSlice(0);
+      }
+    };
     images.push(img);
   }
 
